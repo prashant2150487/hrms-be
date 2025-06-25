@@ -130,123 +130,104 @@ export const getOrganization = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-// export const getOrganization = async (req, res, next) => {
-//   try {
-//     const organization = await Organization.findById(req.params.id);
-
-//     if (!organization) {
-//       return next(
-//         new ErrorResponse(
-//           `Organization not found with id of ${req.params.id}`,
-//           404
-//         )
-//       );
-//     }
-
-//     res.status(200).json({
-//       success: true,
-//       data: organization,
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
 
 // @desc    Update organization
 // @route   PUT /api/v1/organizations/:id
 // @access  Private/SuperAdmin
-// export const updateOrganization = async (req, res, next) => {
-//   try {
-//     // Prevent changing subdomain
-//     if (req.body.subdomain) {
-//       return next(new ErrorResponse("Subdomain cannot be changed", 400));
-//     }
+export const updateOrganization = async (req, res, next) => {
+  try {
+    // Prevent changing subdomain
+    if (req.body.subdomain) {
+      return res.status(400).json({
+        success: false,
+        message: "Subdomain cannot be changed",
+      });
+    }
 
-//     const organization = await Organization.findByIdAndUpdate(
-//       req.params.id,
-//       req.body,
-//       {
-//         new: true,
-//         runValidators: true,
-//       }
-//     );
+    const organization = await Organization.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
 
-//     if (!organization) {
-//       return next(
-//         new ErrorResponse(
-//           `Organization not found with id of ${req.params.id}`,
-//           404
-//         )
-//       );
-//     }
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: `Organization not found with id of ${req.params.id}`,
+      });
+    }
 
-//     res.status(200).json({
-//       success: true,
-//       data: organization,
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
+    res.status(200).json({
+      success: true,
+      data: organization,
+    });
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
 
 // @desc    Delete organization
 // @route   DELETE /api/v1/organizations/:id
 // @access  Private/SuperAdmin
-// export const deleteOrganization = async (req, res, next) => {
-//   try {
-//     const organization = await Organization.findById(req.params.id);
+export const deleteOrganization = async (req, res) => {
+  try {
+    const organization = await Organization.findById(req.params.id);
 
-//     if (!organization) {
-//       return next(
-//         new ErrorResponse(
-//           `Organization not found with id of ${req.params.id}`,
-//           404
-//         )
-//       );
-//     }
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: `Organization not found with id of ${req.params.id}`,
+      });
+    }
 
-//     // Soft delete (recommended for multi-tenant)
-//     organization.isActive = false;
-//     await organization.save();
+    // Soft delete (recommended for multi-tenant)
+    organization.isActive = false;
+    await organization.save();
 
-//     // Optionally deactivate all users
-//     await User.updateMany(
-//       { organization: organization._id },
-//       { isActive: false }
-//     );
+    // Optionally deactivate all users
+    await User.updateMany(
+      { organization: organization._id },
+      { isActive: false }
+    );
 
-//     res.status(200).json({
-//       success: true,
-//       data: {},
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
+    res.status(200).json({
+      success: true,
+      data: {},
+    });
+  } catch (err) {
+    console.log(err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
 
 // @desc    Get organization by subdomain
 // @route   GET /api/v1/organizations/subdomain/:subdomain
 // @access  Public
-// export const getOrganizationBySubdomain = async (req, res, next) => {
-//   try {
-//     const organization = await Organization.findOne({
-//       subdomain: req.params.subdomain,
-//     });
+export const getOrganizationBySubdomain = async (req, res) => {
+  try {
+    const organization = await Organization.findOne({
+      subdomain: req.params.subdomain,
+    });
 
-//     if (!organization) {
-//       return next(
-//         new ErrorResponse(
-//           `Organization not found with subdomain ${req.params.subdomain}`,
-//           404
-//         )
-//       );
-//     }
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: `Organization not found with subdomain ${req.params.subdomain}`,
+      });
+    }
 
-//     res.status(200).json({
-//       success: true,
-//       data: organization,
-//     });
-//   } catch (err) {
-//     next(err);
-//   }
-// };
+    res.status(200).json({
+      success: true,
+      data: organization,
+    });
+  } catch (err) {
+    console.log(err.message);
+  }
+};
