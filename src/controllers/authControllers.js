@@ -38,36 +38,41 @@ import { createTenantDatabase } from "../utils/tenantService.js";
 // };
 export const login = async (req, res) => {
   try {
-    const { email, password, subdomain } = req.body;
+    const { email, password } = req.body;
     // Validate input
-    if (!email || !password || !subdomain) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email, password and subdomain'
+        message: "Please provide email, password and subdomain",
       });
     }
+    const extractSubDomainFromEmail = (email) => {
+      const match = email.match(/@([^.@]+)\.com$/);
+      return match ? match[1] : null;
+    };
+    const subdomain = extractSubDomainFromEmail(email);
     console.log(email, password, subdomain);
     // Check if organization exists and is active
     const organization = await Organization.findOne({ subdomain });
     if (!organization || !organization.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid organization or tenant inactive'
+        message: "Invalid organization or tenant inactive",
       });
     }
-     // Connect to tenant database
+    // Connect to tenant database
     const tenantConn = await createTenantDatabase(subdomain);
-    const TenantUser = tenantConn.model('User');
+    const TenantUser = tenantConn.model("User");
 
-     // Check for user
-    const user = await TenantUser.findOne({ email }).select('+password');
+    // Check for user
+    const user = await TenantUser.findOne({ email }).select("+password");
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: "Invalid credentials",
       });
     }
-    console.log(user);
+
     //check if password match
     const isMatch = await user.matchPassword(password);
     if (!isMatch) {
@@ -85,11 +90,19 @@ export const login = async (req, res) => {
     // create Token
     const token = user.getSignedJwtToken();
     //
+    console.log(user);
     res.status(200).json({
       success: true,
-      token,
-      role: user.role,
-      organization: user.organization,
+      data: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        isActive: user.isActive,
+        organization: user.organization,
+        token
+      },
     });
   } catch (err) {
     console.log(err);

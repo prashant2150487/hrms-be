@@ -1,7 +1,6 @@
-
-import mongoose from 'mongoose';
-import User from '../models/User.js';
-import generatePassword from '../utils/generatePassword.js';
+import mongoose from "mongoose";
+import User from "../models/User.js";
+import generatePassword from "../utils/generatePassword.js";
 
 const connectDB = async () => {
   try {
@@ -9,7 +8,7 @@ const connectDB = async () => {
     // so you can connect with zero options unless you have something special.
     await mongoose.connect(process.env.MONGO_URI);
 
-    console.log('MongoDB connected…');
+    console.log("MongoDB connected…");
 
     await createInitialSuperAdmin();
   } catch (err) {
@@ -23,7 +22,9 @@ const createInitialSuperAdmin = async () => {
 
   // Bail if env var is missing
   if (!superAdminEmail) {
-    console.warn('SUPER_ADMIN_EMAIL not set—skipping initial super‑admin creation.');
+    console.warn(
+      "SUPER_ADMIN_EMAIL not set—skipping initial super‑admin creation."
+    );
     return;
   }
 
@@ -31,13 +32,16 @@ const createInitialSuperAdmin = async () => {
   const existing = await User.findOne({ email: superAdminEmail });
   if (existing) return;
 
-  const newPassword = "Psachan04@";  
+  const newPassword = "Psachan04@";
 
   const superAdmin = new User({
     email: superAdminEmail,
     password: newPassword,
-    role: 'superadmin',
+    role: "superadmin",
     isActive: true,
+    firstName: "Prashant",
+    lastName: "Sachan",
+    phoneNumber: "1234567890",
   });
 
   await superAdmin.save();

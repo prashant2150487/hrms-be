@@ -3,7 +3,7 @@ import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import xss from "xss-clean";
-
+import dotenv from "dotenv"
 import { rateLimit } from "express-rate-limit";
 import hpp from "hpp";
 import cors from "cors";
@@ -12,6 +12,7 @@ import superAdminRoutes from "./routes/superAdminRoutes.js";
 
 const app = express();
 app.disable("x-powered-by");
+dotenv.config();
 
 // Body parsers
 app.use(express.json({ limit: "10kb" }));
@@ -42,6 +43,7 @@ app.use(
   })
 );
 app.use(hpp());
+console.log(process.env.CLIENT_URL,"asd")
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 
 // Routes

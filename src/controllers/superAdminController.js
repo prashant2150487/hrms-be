@@ -11,7 +11,16 @@ import { createTenantDatabase } from "../utils/tenantService.js";
 // @access  Private/SuperAdmin
 export const createOrganization = async (req, res) => {
   try {
-    const { name, subdomain, contactEmail, phone, address, plan } = req.body;
+    const {
+      name,
+      subdomain,
+      contactEmail,
+      phone,
+      address,
+      plan,
+      firstName,
+      lastName,
+    } = req.body;
 
     const existingOrg = await Organization.findOne({ subdomain });
     if (existingOrg) {
@@ -43,12 +52,15 @@ export const createOrganization = async (req, res) => {
     const TenantUser = tenantConn.model("User", userSchema);
 
     // const password = generatePassword();
-    const password="Psachan04@"
+    const password = "Psachan04@";
     const adminUser = await TenantUser.create({
       email: contactEmail,
       password,
       role: "admin",
       organization: organization._id,
+      firstName,
+      lastName,
+      phone,
     });
 
     // Optionally send email
@@ -65,7 +77,6 @@ export const createOrganization = async (req, res) => {
         adminUser: {
           email: adminUser.email,
           role: adminUser.role,
-          
         },
       },
     });
