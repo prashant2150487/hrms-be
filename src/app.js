@@ -3,12 +3,13 @@ import cookieParser from "cookie-parser";
 import mongoSanitize from "express-mongo-sanitize";
 import helmet from "helmet";
 import xss from "xss-clean";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 import { rateLimit } from "express-rate-limit";
 import hpp from "hpp";
 import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
+import organizationRoutes from "./routes/organizationRoutes.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -43,12 +44,12 @@ app.use(
   })
 );
 app.use(hpp());
-console.log(process.env.CLIENT_URL,"asd")
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 
 // Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/superAdmin", superAdminRoutes);
+app.use("/api/v1", organizationRoutes);
 
 // 404
 // app.all('*', (req, res, next) => {

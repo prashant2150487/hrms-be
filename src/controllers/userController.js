@@ -1,5 +1,4 @@
 import Organization from '../models/Organization.js';
-import ErrorResponse from '../utils/ErrorResponse.js';
 
 // @desc    Create user within an organization
 // @route   POST /api/v1/users

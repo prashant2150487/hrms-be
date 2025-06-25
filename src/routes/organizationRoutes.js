@@ -1,16 +1,5 @@
-// import express from 'express';
-// // const {
-// //   getOrganization,
-// //   updateOrganization,
-// //   uploadLogo,
-// //   getOrganizationUsers,
-// //   getOrganizationStats,
-// //   updateSubscription,
-// //   getSubscription
-// // } = require('../controllers/organizationController');
-// const { protect, authorize } = require('../middlewares/auth');
 
-// const router = express.Router();
+
 
 // router.use(protect);
 // router.use(authorize('admin'));
@@ -27,3 +16,12 @@
 //   .put(updateSubscription);
 
 // module.exports = router;
+import express from 'express';
+import { getOrganization } from '../controllers/organizationController.js';
+import { protect } from '../middleware/auth.js';
+const router =express.Router()
+// router.post("/organization/onboard",onboardEmployee)
+router.get("/organization", protect, getOrganization)
+
+
+export default router;
