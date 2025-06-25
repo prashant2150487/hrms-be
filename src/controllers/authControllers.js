@@ -95,7 +95,8 @@ export const login = async (req, res) => {
       success: true,
       data: {
         id: user._id,
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         role: user.role,
         phone: user.phone,
@@ -113,14 +114,14 @@ export const login = async (req, res) => {
 // @desc    Get current logged in user
 // @route   GET /api/v1/auth/me
 // @access  Private
-// exports.getMe = async (req, res, next) => {
-//   const user = await User.findById(req.user.id).populate("organization");
+export const getMe = async (req, res, next) => {
+  const user = await User.findById(req.user.id).populate("organization");
 
-//   res.status(200).json({
-//     success: true,
-//     data: user,
-//   });
-// };
+  res.status(200).json({
+    success: true,
+    data: user,
+  });
+};
 
 // @desc    Forgot password
 // @route   POST /api/v1/auth/forgotpassword

@@ -6,12 +6,12 @@ import express from 'express';
 // } = require("../controllers/authController");
 // const { protect } = require("../middlewares/auth");
 
-import { login } from "../controllers/authControllers.js";
+import { getMe, login } from "../controllers/authControllers.js";
 
 const router = express.Router();
 
 router.post("/login", login);
-// router.get("/me", protect, getMe);
+router.get("/me", getMe);
 // router.post("/forgotpassword", forgotPassword);
 
 // module.exports = router;
