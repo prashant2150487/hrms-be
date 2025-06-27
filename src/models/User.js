@@ -17,6 +17,10 @@ const userSchema = new mongoose.Schema(
       enum: ["superadmin", "admin", "manager", "employee"],
       default: "employee",
     },
+    startDate: Date,
+    department: String,
+    designation: String,
+    location: String,
     organization: { type: mongoose.Schema.Types.ObjectId, ref: "Organization" },
     isActive: { type: Boolean, default: true },
     resetPasswordToken: String,
@@ -33,7 +37,12 @@ userSchema.pre("save", async function (next) {
 
 userSchema.methods.getSignedJwtToken = function () {
   return jwt.sign(
-    { id: this._id, role: this.role, organization: this.organization , email: this.emai  },
+    {
+      id: this._id,
+      role: this.role,
+      organization: this.organization,
+      email: this.email,
+    },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE }
   );

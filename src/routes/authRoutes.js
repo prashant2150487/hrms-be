@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 // const {
 //   login,
 //   getMe,
@@ -7,6 +7,7 @@ import express from 'express';
 // const { protect } = require("../middlewares/auth");
 
 import { getMe, login } from "../controllers/authControllers.js";
+
 
 const router = express.Router();
 

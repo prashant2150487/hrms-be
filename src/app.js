@@ -10,6 +10,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import superAdminRoutes from "./routes/superAdminRoutes.js";
 import organizationRoutes from "./routes/organizationRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
 
 const app = express();
 app.disable("x-powered-by");
@@ -50,6 +51,7 @@ app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/superAdmin", superAdminRoutes);
 app.use("/api/v1", organizationRoutes);
+app.use("/api/v1/admin", userRoutes);
 
 // 404
 // app.all('*', (req, res, next) => {

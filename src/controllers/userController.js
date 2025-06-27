@@ -1,11 +1,11 @@
 import Organization from '../models/Organization.js';
 
 // @desc    Create user within an organization
-// @route   POST /api/v1/users
+// @route   POST /api/v1/admin/users
 // @access  Private/Admin
 export const createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, phone, role } = req.body;
+    const { email, password, firstName, lastName, phone, role ,department , designation , location,startDate } = req.body;
 
     // Check if user already exists in tenant DB
     const TenantUser = req.tenantConn.model('User');
@@ -27,7 +27,11 @@ export const createUser = async (req, res) => {
       phone,
       role: role || 'employee',
       organization: req.user.organization,
-      isActive: true
+      isActive: true,
+      department,
+      designation,
+      location,
+      startDate
     });
 
     // TODO: Send welcome email if needed
