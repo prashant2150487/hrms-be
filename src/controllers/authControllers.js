@@ -94,7 +94,10 @@ export const updatePassword = async (req, res, next) => {
     // Check current password
     const isMatch = await user.matchPassword(req.body.currentPassword);
     if (!isMatch) {
-      return next(new ErrorResponse("Current password is incorrect", 401));
+      return res.status(401).json({
+        success: false,
+        message: "Current password is incorrect",
+      });
     }
 
     user.password = req.body.newPassword;
@@ -102,7 +105,11 @@ export const updatePassword = async (req, res, next) => {
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    next(err);
+    console.log(err.message)
+    res.status(500).json({
+      success:false,
+      message:"Server Error"
+    })
   }
 };
 
