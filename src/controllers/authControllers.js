@@ -23,7 +23,6 @@ export const login = async (req, res) => {
       return match ? match[1] : null;
     };
     const subdomain = extractSubDomainFromEmail(email);
-    console.log(email, password, subdomain);
     // Check if organization exists and is active
     const organization = await Organization.findOne({ subdomain });
     if (!organization || !organization.isActive) {
@@ -62,7 +61,7 @@ export const login = async (req, res) => {
     // create Token
     const token = user.getSignedJwtToken();
     //
-    console.log(user);
+    console.log(user,"in token");
     res.status(200).json({
       success: true,
       data: {
@@ -105,11 +104,11 @@ export const updatePassword = async (req, res, next) => {
 
     sendTokenResponse(user, 200, res);
   } catch (err) {
-    console.log(err.message)
+    console.log(err.message);
     res.status(500).json({
-      success:false,
-      message:"Server Error"
-    })
+      success: false,
+      message: "Server Error",
+    });
   }
 };
 
@@ -121,18 +120,25 @@ export const getMe = async (req, res) => {
     const TenantUser = req.tenantConn.model("User");
     const user = await TenantUser.findById(req.user.id)
       .select("-password")
-      .lean();
+      
 
     // Get organization details from master DB
     const organization = await Organization.findById(user.organization)
       .select("name subdomain subscription")
       .lean();
-
+    const token = user.getSignedJwtToken();
     res.status(200).json({
       success: true,
       data: {
-        ...user,
-        organization,
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        isActive: user.isActive,
+        organization: user.organization,
+        token
       },
     });
   } catch (err) {
@@ -312,3 +318,5 @@ const sendTokenResponse = (user, statusCode, res) => {
       },
     });
 };
+
+

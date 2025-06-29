@@ -22,7 +22,6 @@ export const protect = async (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log(decoded, "decoded")
     const extractSubDomainFromEmail = (email) => {
       const match = email.match(/@([^.@]+)\.com$/);
       return match ? match[1] : null;

@@ -7,12 +7,12 @@ import express from "express";
 // const { protect } = require("../middlewares/auth");
 
 import { getMe, login } from "../controllers/authControllers.js";
-
+import { protect } from "../middleware/auth.js";
 
 const router = express.Router();
 
 router.post("/login", login);
-router.get("/me", getMe);
+router.get("/getme", protect, getMe);
 // router.post("/forgotpassword", forgotPassword);
 
 // module.exports = router;

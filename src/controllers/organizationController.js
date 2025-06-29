@@ -7,7 +7,6 @@ import Organization from "../models/Organization.js";
 // @access  Private/Admin
 export const getOrganization = async (req, res) => {
   try {
-    console.log(req.user.organization,"anv")
     const organization = await Organization.findById(req.user.organization);
 
     if (!organization) {
