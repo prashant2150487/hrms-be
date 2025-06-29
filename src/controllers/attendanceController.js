@@ -138,3 +138,74 @@ export const clockOut = async (req, res) => {
     });
   }
 };
+
+// @desc    Get today's attendance status
+// @route   GET /api/v1/attendance/status
+// @access  Private
+export const attendanceStatus = async (req, res) => {
+  try {
+    const organization = await Organization.findById(req.user.organization);
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: "Organization not found",
+      });
+    }
+
+    const tenantConn = await createTenantDatabase(organization.subdomain);
+    const TenantAttendance = tenantConn.model("Attendance");
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    const attendance = await TenantAttendance.findOne({
+      user: req.user.id,
+      clockIn: {
+        $gte: today,
+        $lt: tomorrow,
+      },
+    });
+
+    // Not clocked in
+    if (!attendance) {
+      return res.status(200).json({
+        success: true,
+        status: "not_clocked_in",
+        isClockIn: false,
+        isClockOut: false,
+        message: "You have not clocked in today",
+      });
+    }
+
+    // Clocked in but not out
+    if (!attendance.clockOut) {
+      return res.status(200).json({
+        success: true,
+        status: "clocked_in",
+        isClockIn: true,
+        isClockOut: false,
+        message: "You are currently clocked in but not yet clocked out",
+        clockInTime: attendance.clockIn,
+      });
+    }
+
+    // Fully done
+    return res.status(200).json({
+      success: true,
+      status: "clocked_out",
+      isClockIn: true,
+      isClockOut: true,
+      message: "You have clocked in and out today",
+      clockInTime: attendance.clockIn,
+      clockOutTime: attendance.clockOut,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};

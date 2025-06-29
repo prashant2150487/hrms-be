@@ -1,10 +1,8 @@
 import express from "express";
 import { createUser } from "../controllers/userController.js";
 import { protect } from "../middleware/auth.js";
-import { clockOut, webClockIn } from "../controllers/attendanceController.js";
 
 const router = express.Router();
 router.post("/users", protect, createUser);
-router.post("/attendance", protect, webClockIn);
-router.post("/attendance", protect, clockOut);
+
 export default router;
