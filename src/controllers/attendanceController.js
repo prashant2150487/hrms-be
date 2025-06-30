@@ -13,77 +13,10 @@ export const webClockIn = async (req, res) => {
         message: "Longitude and latitude are required.",
       });
     }
+
     const organization = await Organization.findById(req.user.organization);
     if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: "Organization not found",
-      });
-    }
-    //connect to tenut detabase
-    const tenantConn = await createTenantDatabase(organization.subdomain);
-    const TenantAttendance = tenantConn.model("Attendance");
-
-    //check if already webclockin today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const existingAttendance = await TenantAttendance.findOne({
-      user: req.user.id,
-      clockIn: {
-        $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-      },
-    });
-
-    if (existingAttendance) {
-      return res.status(400).json({
-        success: false,
-        message: "you have already clocked in today",
-      });
-    }
-
-    const now = new Date();
-    // Create new attendance record
-    const attendance = await TenantAttendance.create({
-      user: req.user.id,
-      organization: req.user.organization,
-      clockIn: now,
-      date: now,
-      clockOut: null, // default until updated later
-      workingHours: 0, // will be updated on clock out
-      status: "present",
-
-      location: {
-        type: "Point",
-        coordinates: [longitude, latitude],
-      },
-    });
-    res.status(201).json({
-      success: true,
-      data: attendance,
-    });
-  } catch (err) {
-    console.log(err);
-
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
-
-// @desc    Clock out for the day
-// @route   POST /api/v1/attendance/clock-out
-// @access  Private
-
-export const clockOut = async (req, res) => {
-  try {
-    const organization = await Organization.findById(req.user.organization);
-    if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: "Organization not found",
-      });
+      return res.status(404).json({ success: false, message: "Organization not found" });
     }
 
     const tenantConn = await createTenantDatabase(organization.subdomain);
@@ -94,48 +27,108 @@ export const clockOut = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    const attendance = await TenantAttendance.findOne({
+    // Check for open session
+    const openSession = await TenantAttendance.findOne({
       user: req.user.id,
-      organization: req.user.organization,
-      clockIn: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+      clockIn: { $gte: today, $lt: tomorrow },
+      clockOut: null,
     });
 
-    if (!attendance) {
-      return res.status(404).json({
+    if (openSession) {
+      return res.status(400).json({
         success: false,
-        message: "No attendance record found for today",
+        message: "You are already clocked in. Please clock out first.",
       });
     }
 
-    if (attendance.clockOut) {
+    const now = new Date();
+
+    const attendance = await TenantAttendance.create({
+      user: req.user.id,
+      organization: req.user.organization,
+      date: now,
+      clockIn: now,
+      clockOut: null,
+      workingHours: 0, // This is for this session only; accumulated later
+      status: "present",
+      location: {
+        type: "Point",
+        coordinates: [longitude, latitude],
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: attendance,
+      message: "Clocked in successfully",
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+};
+
+
+// @desc    Clock out for the day
+// @route   POST /api/v1/attendance/clock-out
+// @access  Private
+
+export const clockOut = async (req, res) => {
+  try {
+    const organization = await Organization.findById(req.user.organization);
+    if (!organization) {
+      return res.status(404).json({ success: false, message: "Organization not found" });
+    }
+
+    const tenantConn = await createTenantDatabase(organization.subdomain);
+    const TenantAttendance = tenantConn.model("Attendance");
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    // Find last open session
+    const attendance = await TenantAttendance.findOne({
+      user: req.user.id,
+      clockIn: { $gte: today, $lt: tomorrow },
+      clockOut: null,
+    });
+
+    if (!attendance) {
       return res.status(400).json({
         success: false,
-        message: "You have already clocked out today",
+        message: "You are not currently clocked in.",
       });
     }
 
     const clockOutTime = new Date();
-    const workingHours = (clockOutTime - attendance.clockIn) / (1000 * 60 * 60);
+    const sessionHours = (clockOutTime - attendance.clockIn) / (1000 * 60 * 60);
 
+    // Update the session
     attendance.clockOut = clockOutTime;
-    attendance.workingHours = workingHours;
-    attendance.status = workingHours < 4 ? "half-day" : "present";
-
+    attendance.workingHours = sessionHours;
     await attendance.save();
 
+    // Sum of all today's sessions
+    const allTodaySessions = await TenantAttendance.find({
+      user: req.user.id,
+      clockIn: { $gte: today, $lt: tomorrow },
+      clockOut: { $ne: null },
+    });
+
+    const totalWorkingHours = allTodaySessions.reduce((acc, s) => acc + s.workingHours, 0);
+
+    // Optional: update status somewhere, or return total working hours
     res.status(200).json({
       success: true,
       data: attendance,
+      totalWorkingHours,
+      message: "Clocked out successfully",
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -146,10 +139,7 @@ export const attendanceStatus = async (req, res) => {
   try {
     const organization = await Organization.findById(req.user.organization);
     if (!organization) {
-      return res.status(404).json({
-        success: false,
-        message: "Organization not found",
-      });
+      return res.status(404).json({ success: false, message: "Organization not found" });
     }
 
     const tenantConn = await createTenantDatabase(organization.subdomain);
@@ -160,16 +150,15 @@ export const attendanceStatus = async (req, res) => {
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    const attendance = await TenantAttendance.findOne({
+    const sessions = await TenantAttendance.find({
       user: req.user.id,
-      clockIn: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+      clockIn: { $gte: today, $lt: tomorrow },
     });
 
-    // Not clocked in
-    if (!attendance) {
+    const openSession = sessions.find((s) => !s.clockOut);
+    const totalWorkingHours = sessions.reduce((acc, s) => acc + (s.workingHours || 0), 0);
+
+    if (sessions.length === 0) {
       return res.status(200).json({
         success: true,
         status: "not_clocked_in",
@@ -179,33 +168,28 @@ export const attendanceStatus = async (req, res) => {
       });
     }
 
-    // Clocked in but not out
-    if (!attendance.clockOut) {
+    if (openSession) {
       return res.status(200).json({
         success: true,
         status: "clocked_in",
         isClockIn: true,
         isClockOut: false,
-        message: "You are currently clocked in but not yet clocked out",
-        clockInTime: attendance.clockIn,
+        message: "You are currently clocked in",
+        clockInTime: openSession.clockIn,
+        totalWorkingHours,
       });
     }
 
-    // Fully done
     return res.status(200).json({
       success: true,
       status: "clocked_out",
-      isClockIn: true,
+      isClockIn: false,
       isClockOut: true,
-      message: "You have clocked in and out today",
-      clockInTime: attendance.clockIn,
-      clockOutTime: attendance.clockOut,
+      message: "You have completed your attendance for today",
+      totalWorkingHours,
     });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
