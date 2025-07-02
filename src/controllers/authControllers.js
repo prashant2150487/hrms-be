@@ -82,35 +82,62 @@ export const login = async (req, res) => {
   }
 };
 
+
+
+// @desc    Log user out / clear cookie
+// @route   GET /api/v1/auth/logout
+// @access  Private
+export const logout = async (req, res, next) => {
+  try {
+    // Clear the token cookie
+    res.cookie("token", "none", {
+      expires: new Date(Date.now() + 10 * 1000),
+      httpOnly: true,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {},
+    });
+  } catch (err) {
+       console.error("Logout error:", err);
+       res.status(500).json({
+        success:false,
+        message:"Server Error",
+        error: err.message
+       })
+  }
+}
+
 // @desc    Update user password
 // @route   PUT /api/v1/auth/updatepassword
 // @access  Private
-export const updatePassword = async (req, res, next) => {
-  try {
-    const TenantUser = req.tenantConn.model("User");
-    const user = await TenantUser.findById(req.user.id).select("+password");
+// export const updatePassword = async (req, res, next) => {
+//   try {
+//     const TenantUser = req.tenantConn.model("User");
+//     const user = await TenantUser.findById(req.user.id).select("+password");
 
-    // Check current password
-    const isMatch = await user.matchPassword(req.body.currentPassword);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Current password is incorrect",
-      });
-    }
+//     // Check current password
+//     const isMatch = await user.matchPassword(req.body.currentPassword);
+//     if (!isMatch) {
+//       return res.status(401).json({
+//         success: false,
+//         message: "Current password is incorrect",
+//       });
+//     }
 
-    user.password = req.body.newPassword;
-    await user.save();
+//     user.password = req.body.newPassword;
+//     await user.save();
 
-    sendTokenResponse(user, 200, res);
-  } catch (err) {
-    console.log(err.message);
-    res.status(500).json({
-      success: false,
-      message: "Server Error",
-    });
-  }
-};
+//     sendTokenResponse(user, 200, res);
+//   } catch (err) {
+//     console.log(err.message);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error",
+//     });
+//   }
+// };
 
 // @desc    Get current logged in user
 // @route   GET /api/v1/auth/me
@@ -271,24 +298,6 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 
-// @desc    Log user out / clear cookie
-// @route   GET /api/v1/auth/logout
-// @access  Private
-export const logout = async (req, res, next) => {
-  try {
-    res.cookie("token", "none", {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-    });
-
-    res.status(200).json({
-      success: true,
-      data: {},
-    });
-  } catch (err) {
-    next(err);
-  }
-};
 
 // Helper function for sending token response
 const sendTokenResponse = (user, statusCode, res) => {
