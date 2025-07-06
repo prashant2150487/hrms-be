@@ -16,7 +16,9 @@ export const webClockIn = async (req, res) => {
 
     const organization = await Organization.findById(req.user.organization);
     if (!organization) {
-      return res.status(404).json({ success: false, message: "Organization not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Organization not found" });
     }
 
     const tenantConn = await createTenantDatabase(organization.subdomain);
@@ -67,7 +69,6 @@ export const webClockIn = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-
 
 // @desc    Clock out for the day
 // @route   POST /api/v1/attendance/clock-out
@@ -191,5 +192,131 @@ export const attendanceStatus = async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
+
+// @desc    Get attendance summary for last 30 days (today + previous 29 days)
+// @route   GET /api/v1/attendance/status/summary
+// @access  Private
+export const getAttendanceSummary = async (req, res) => {
+  try {
+    const organization = await Organization.findById(req.user.organization);
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: "Organization not found"
+      });
+    }
+
+    const tenantConn = await createTenantDatabase(organization.subdomain);
+    const TenantAttendance = tenantConn.model("Attendance");
+
+    // Set up date range (today and previous 29 days)
+    const endDate = new Date();
+    endDate.setHours(23, 59, 59, 999); // End of today
+
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - 29);
+    startDate.setHours(0, 0, 0, 0); // Start of day 30 days ago
+
+    // Get all attendance records in this date range
+    const allSessions = await TenantAttendance.find({
+      user: req.user.id,
+      clockIn: { $gte: startDate, $lte: endDate }
+    }).sort({ clockIn: 1 });
+
+    // Organize data by day
+    const dailySummaries = {};
+    const now = new Date();
+
+    // Initialize all dates in range (to include days with no attendance)
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toISOString().split('T')[0];
+      dailySummaries[dateKey] = {
+        date: new Date(d),
+        status: 'absent',
+        totalHours: 0,
+        sessions: [],
+        isToday: d.toDateString() === now.toDateString()
+      };
+    }
+
+    // Process all sessions and populate daily summaries
+    allSessions.forEach(session => {
+      const sessionDate = new Date(session.clockIn);
+      const dateKey = sessionDate.toISOString().split('T')[0];
+      
+      if (!dailySummaries[dateKey]) {
+        dailySummaries[dateKey] = {
+          date: new Date(sessionDate),
+          status: 'absent',
+          totalHours: 0,
+          sessions: [],
+          isToday: sessionDate.toDateString() === now.toDateString()
+        };
+      }
+
+      const daySummary = dailySummaries[dateKey];
+      
+      // Add session to day
+      const sessionData = {
+        clockIn: session.clockIn,
+        clockOut: session.clockOut,
+        hours: session.workingHours || 0,
+        location: session.location
+      };
+      
+      daySummary.sessions.push(sessionData);
+      daySummary.totalHours += sessionData.hours;
+
+      // Update day status
+      if (sessionData.hours > 0) {
+        if (!session.clockOut) {
+          daySummary.currentStatus = 'clocked_in';
+        } else if (daySummary.currentStatus !== 'clocked_in') {
+          daySummary.currentStatus = 'clocked_out';
+        }
+
+        if (daySummary.totalHours >= 8) {
+          daySummary.status = 'present';
+        } else if (daySummary.totalHours >= 4) {
+          daySummary.status = 'half-day';
+        }
+      }
+    });
+
+    // Convert to array sorted by date (newest first)
+    const summaryArray = Object.values(dailySummaries)
+      .sort((a, b) => b.date - a.date);
+
+    // Calculate overall stats
+    const presentDays = summaryArray.filter(d => d.status === 'present').length;
+    const halfDays = summaryArray.filter(d => d.status === 'half-day').length;
+    const absentDays = summaryArray.filter(d => d.status === 'absent').length;
+    const totalWorkingHours = summaryArray.reduce((sum, day) => sum + day.totalHours, 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        startDate,
+        endDate,
+        totalDays: summaryArray.length,
+        presentDays,
+        halfDays,
+        absentDays,
+        totalWorkingHours,
+        dailySummaries: summaryArray,
+        todaySummary: summaryArray.find(d => d.isToday) || null
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
   }
 };
