@@ -1,4 +1,5 @@
 import Organization from "../models/Organization.js";
+import { createTenantDatabase } from "../utils/tenantService.js";
 
 // @desc    Create user within an organization
 // @route   POST /api/v1/admin/users
@@ -77,27 +78,76 @@ export const createUser = async (req, res) => {
 // @desc    Get all users in organization
 // @route   GET /api/v1/users
 // @access  Private/Admin
-export const getUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
   try {
-    const TenantUser = req.tenantConn.model("User");
-    const users = await TenantUser.find({ organization: req.user.organization })
-      .select("-password")
+    // 1. Get organization details from master DB
+    const organization = await Organization.findById(req.user.organization);
+    if (!organization) {
+      return res.status(404).json({
+        success: false,
+        message: "Organization not found"
+      });
+    }
+
+    // 2. Connect to tenant database
+    const tenantConn = await createTenantDatabase(organization.subdomain);
+    const TenantUser = tenantConn.model("User");
+
+    // 3. Build query (only users in current organization)
+    const query = { organization: req.user.organization };
+
+    // Optional filters
+    if (req.query.role) {
+      query.role = req.query.role;
+    }
+    if (req.query.department) {
+      query.department = req.query.department;
+    }
+    if (req.query.isActive) {
+      query.isActive = req.query.isActive === 'true';
+    }
+    if (req.query.search) {
+      query.$or = [
+        { firstName: { $regex: req.query.search, $options: 'i' } },
+        { lastName: { $regex: req.query.search, $options: 'i' } },
+        { email: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
+
+    // 4. Set up pagination
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const startIndex = (page - 1) * limit;
+
+    // 5. Get total count for pagination
+    const total = await TenantUser.countDocuments(query);
+
+    // 6. Get users with pagination and filtering
+    const users = await TenantUser.find(query)
+      .select('-password -resetPasswordToken -resetPasswordExpire')
+      .sort({ createdAt: -1 })
+      .skip(startIndex)
+      .limit(limit)
       .lean();
 
+    // 7. Return response
     res.status(200).json({
       success: true,
       count: users.length,
-      data: users,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      data: users
     });
+
   } catch (err) {
     console.error("Get users error:", err);
     res.status(500).json({
       success: false,
-      message: "Server error fetching users",
+      message: "Server error fetching users"
     });
   }
 };
-
 // @desc    Get single user
 // @route   GET /api/v1/users/:id
 // @access  Private/Admin
