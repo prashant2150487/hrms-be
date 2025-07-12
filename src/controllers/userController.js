@@ -1,4 +1,5 @@
 import Organization from "../models/Organization.js";
+import mongoose from "mongoose";
 import { createTenantDatabase } from "../utils/tenantService.js";
 
 // @desc    Create user within an organization
@@ -85,7 +86,7 @@ export const getAllUsers = async (req, res) => {
     if (!organization) {
       return res.status(404).json({
         success: false,
-        message: "Organization not found"
+        message: "Organization not found",
       });
     }
 
@@ -104,13 +105,13 @@ export const getAllUsers = async (req, res) => {
       query.department = req.query.department;
     }
     if (req.query.isActive) {
-      query.isActive = req.query.isActive === 'true';
+      query.isActive = req.query.isActive === "true";
     }
     if (req.query.search) {
       query.$or = [
-        { firstName: { $regex: req.query.search, $options: 'i' } },
-        { lastName: { $regex: req.query.search, $options: 'i' } },
-        { email: { $regex: req.query.search, $options: 'i' } }
+        { firstName: { $regex: req.query.search, $options: "i" } },
+        { lastName: { $regex: req.query.search, $options: "i" } },
+        { email: { $regex: req.query.search, $options: "i" } },
       ];
     }
 
@@ -124,7 +125,7 @@ export const getAllUsers = async (req, res) => {
 
     // 6. Get users with pagination and filtering
     const users = await TenantUser.find(query)
-      .select('-password -resetPasswordToken -resetPasswordExpire')
+      .select("-password -resetPasswordToken -resetPasswordExpire")
       .sort({ createdAt: -1 })
       .skip(startIndex)
       .limit(limit)
@@ -137,14 +138,13 @@ export const getAllUsers = async (req, res) => {
       total,
       page,
       pages: Math.ceil(total / limit),
-      data: users
+      data: users,
     });
-
   } catch (err) {
     console.error("Get users error:", err);
     res.status(500).json({
       success: false,
-      message: "Server error fetching users"
+      message: "Server error fetching users",
     });
   }
 };
@@ -226,6 +226,13 @@ export const updateUser = async (req, res) => {
 // @access  Private/Admin
 export const deactivateUser = async (req, res) => {
   try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid user ID format",
+      });
+    }
     const TenantUser = req.tenantConn.model("User");
     const user = await TenantUser.findOneAndUpdate(
       {
