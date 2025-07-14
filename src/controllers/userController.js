@@ -234,15 +234,11 @@ export const deactivateUser = async (req, res) => {
       });
     }
     const TenantUser = req.tenantConn.model("User");
-    const user = await TenantUser.findOneAndUpdate(
-      {
-        _id: req.params.id,
-        organization: req.user.organization,
-      },
-      { isActive: false },
-      { new: true }
-    ).select("-password");
 
+    const user = await TenantUser.findOne({
+      _id: id,
+      organization: req.user.organization,
+    });
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -250,9 +246,18 @@ export const deactivateUser = async (req, res) => {
       });
     }
 
+    user.isActive = !user.isActive;
+    await user.save();
+
     res.status(200).json({
       success: true,
-      data: {},
+      message: `User has been ${
+        user.isActive ? "activated" : "deactivated"
+      } successfully.`,
+      data: {
+        _id: user._id,
+        isActive: user.isActive,
+      },
     });
   } catch (err) {
     console.error("Deactivate user error:", err);
@@ -262,3 +267,7 @@ export const deactivateUser = async (req, res) => {
     });
   }
 };
+
+// @desc    Acctivate user
+// @route   DELETE /api/v1/users/:id
+// @access  Private/Admin
