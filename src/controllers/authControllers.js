@@ -1,7 +1,7 @@
-// const { sendEmail } = require('../utils/sendEmail');
 
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
 import { createTenantDatabase } from "../utils/tenantService.js";
 
 // @desc    Login user
@@ -82,8 +82,6 @@ export const login = async (req, res) => {
   }
 };
 
-
-
 // @desc    Log user out / clear cookie
 // @route   GET /api/v1/auth/logout
 // @access  Private
@@ -100,14 +98,14 @@ export const logout = async (req, res, next) => {
       data: {},
     });
   } catch (err) {
-       console.error("Logout error:", err);
-       res.status(500).json({
-        success:false,
-        message:"Server Error",
-        error: err.message
-       })
+    console.error("Logout error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: err.message,
+    });
   }
-}
+};
 
 // @desc    Update user password
 // @route   PUT /api/v1/auth/updatepassword
@@ -145,9 +143,7 @@ export const logout = async (req, res, next) => {
 export const getMe = async (req, res) => {
   try {
     const TenantUser = req.tenantConn.model("User");
-    const user = await TenantUser.findById(req.user.id)
-      .select("-password")
-      
+    const user = await TenantUser.findById(req.user.id).select("-password");
 
     // Get organization details from master DB
     const organization = await Organization.findById(user.organization)
@@ -165,7 +161,7 @@ export const getMe = async (req, res) => {
         phone: user.phone,
         isActive: user.isActive,
         organization: user.organization,
-        token
+        token,
       },
     });
   } catch (err) {
@@ -178,74 +174,95 @@ export const getMe = async (req, res) => {
 };
 
 // @desc    Forgot password
-// @route   POST /api/v1/auth/forgotpassword
+// @route   POST /api/v1/auth/forgot-password
 // @access  Public
-
 export const forgotPassword = async (req, res, next) => {
+  let user; // Declare user variable at the top to ensure scope in catch block
   try {
     const { email } = req.body;
+    // Validate email input
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: "Please provide email",
+        message: "Please provide an email address",
       });
     }
+    // Extract subdomain from email
     const subdomain = email.match(/@([^.@]+)\.com$/)?.[1];
     if (!subdomain) {
-      return next(new ErrorResponse("Invalid email domain", 400));
-    }
-    // Check organization
-    const organization = await Organization.findOne({ subdomain });
-    if (!organization) {
-      return res.status(404).json({
+      return res.status(400).json({
         success: false,
-        message: "Organization not found",
+        message: "Invalid email domain",
       });
     }
-    // Connect to tenant DB
+    // Check if organization exists and is active
+    const organization = await Organization.findOne({ subdomain });
+    if (!organization || !organization.isActive) {
+      return res.status(404).json({
+        success: false,
+        message: "Organization not found or inactive",
+      });
+    }
+
+    // Connect to tenant database
     const tenantConn = await createTenantDatabase(subdomain);
     const TenantUser = tenantConn.model("User");
 
-    // Check for user
-    const user = await TenantUser.findOne({ email });
+    // Check if user exists
+    user = await TenantUser.findOne({ email });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "No user found with this email address",
       });
     }
 
-    //get rest token
+    // Generate and save reset token
     const resetToken = user.getResetPasswordToken();
-    await user.save({});
-    // const resetToken
+    await user.save({ validateBeforeSave: false });
 
     // Create reset URL
     const resetUrl = `${req.protocol}://${req.get(
       "host"
     )}/api/v1/auth/resetpassword/${resetToken}`;
-    // TODO: Implement email sending functionality
-    // await sendEmail({
-    //   email: user.email,
-    //   subject: 'Password Reset Token',
-    //   message: `You are receiving this email because you requested a password reset. Please make a PUT request to: \n\n ${resetUrl}`
-    // });
-    // Extract subdomain from email
-    res.status(200).json({
-      success: true,
-      data: "Email sent",
-    });
+
+    // Send email with reset URL
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Password Reset Request",
+        message: `You are receiving this email because you (or someone else) requested a password reset. 
+Please visit the following link to reset your password: \n\n${resetUrl}\n\n
+If you did not request this, please ignore this email. The reset link will expire in 1 hour.`,
+
+      });
+
+      res.status(200).json({
+        success: true,
+        data: { message: "Password reset email sent successfully" },
+      });
+    } catch (emailErr) {
+      // Clear reset token if email sending fails
+      if (user) {
+        user.clearResetToken();
+        await user.save({ validateBeforeSave: false });
+      }
+      console.error("Email sending error:", emailErr);
+      return res.status(500).json({
+        success: false,
+        message: "Error sending password reset email",
+      });
+    }
   } catch (err) {
-    // Clear reset token if error
+    // Clear reset token if user is defined
     if (user) {
       user.clearResetToken();
-      await user.save();
+      await user.save({ validateBeforeSave: false });
     }
-
-    console.log(err.message);
-    return res.status(500).json({
+    console.error("Forgot password error:", err);
+    return res. status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error processing password reset request",
     });
   }
 };
@@ -253,50 +270,6 @@ export const forgotPassword = async (req, res, next) => {
 // @desc    Reset password
 // @route   PUT /api/v1/auth/resetpassword/:resettoken
 // @access  Public
-export const resetPassword = async (req, res, next) => {
-  try {
-    // Get hashed token
-    const resetPasswordToken = crypto
-      .createHash("sha256")
-      .update(req.params.resettoken)
-      .digest("hex");
-
-    // Extract subdomain from token (you might need to modify this based on your token structure)
-    // Alternatively, you might need to pass subdomain in the request body
-    const { subdomain } = req.body;
-    if (!subdomain) {
-      return next(new ErrorResponse("Subdomain is required", 400));
-    }
-
-    // Check organization
-    const organization = await Organization.findOne({ subdomain });
-    if (!organization || !organization.isActive) {
-      return next(new ErrorResponse("Organization not found or inactive", 404));
-    }
-
-    // Connect to tenant DB
-    const tenantConn = await createTenantDatabase(subdomain);
-    const TenantUser = tenantConn.model("User");
-
-    const user = await TenantUser.findOne({
-      resetPasswordToken,
-      resetPasswordExpire: { $gt: Date.now() },
-    });
-
-    if (!user) {
-      return next(new ErrorResponse("Invalid token or token expired", 400));
-    }
-
-    // Set new password
-    user.password = req.body.password;
-    user.clearResetToken();
-    await user.save();
-
-    sendTokenResponse(user, 200, res);
-  } catch (err) {
-    next(err);
-  }
-};
 
 
 // Helper function for sending token response
@@ -327,5 +300,3 @@ const sendTokenResponse = (user, statusCode, res) => {
       },
     });
 };
-
-

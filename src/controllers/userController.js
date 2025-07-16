@@ -260,10 +260,10 @@ export const deactivateUser = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Deactivate user error:", err);
+   console.error("Toggle user active status error:", err);
     res.status(500).json({
       success: false,
-      message: "Server error deactivating user",
+      message: "Server error toggling user status",
     });
   }
 };
