@@ -222,9 +222,7 @@ export const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get(
-      "host"
-    )}/api/v1/auth/resetpassword/${resetToken}`;
+    const resetUrl = `${req.protocol}://${process.env.CLIENT_URL}/api/v1/auth/resetpassword/${resetToken}`;
 
     // Send email with reset URL
     try {
