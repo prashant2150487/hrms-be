@@ -1,4 +1,3 @@
-
 import Organization from "../models/Organization.js";
 import User from "../models/User.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -61,7 +60,6 @@ export const login = async (req, res) => {
     // create Token
     const token = user.getSignedJwtToken();
     //
-    console.log(user,"in token");
     res.status(200).json({
       success: true,
       data: {
@@ -222,7 +220,7 @@ export const forgotPassword = async (req, res, next) => {
     await user.save({ validateBeforeSave: false });
 
     // Create reset URL
-    const resetUrl = `${req.protocol}://${process.env.CLIENT_URL}/api/v1/auth/resetpassword/${resetToken}`;
+    const resetUrl = `${req.protocol}://${process.env.CLIENT_URL}/create-password/${resetToken}`;
 
     // Send email with reset URL
     try {
@@ -230,9 +228,8 @@ export const forgotPassword = async (req, res, next) => {
         email: user.email,
         subject: "Password Reset Request",
         message: `You are receiving this email because you (or someone else) requested a password reset. 
-Please visit the following link to reset your password: \n\n${resetUrl}\n\n
-If you did not request this, please ignore this email. The reset link will expire in 1 hour.`,
-
+                  Please visit the following link to reset your password: \n\n${resetUrl}\n\n
+                  If you did not request this, please ignore this email. The reset link will expire in 1 hour.`,
       });
 
       res.status(200).json({
@@ -258,7 +255,7 @@ If you did not request this, please ignore this email. The reset link will expir
       await user.save({ validateBeforeSave: false });
     }
     console.error("Forgot password error:", err);
-    return res. status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error processing password reset request",
     });
@@ -268,7 +265,6 @@ If you did not request this, please ignore this email. The reset link will expir
 // @desc    Reset password
 // @route   PUT /api/v1/auth/resetpassword/:resettoken
 // @access  Public
-
 
 // Helper function for sending token response
 const sendTokenResponse = (user, statusCode, res) => {
