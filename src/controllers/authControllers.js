@@ -263,8 +263,56 @@ export const forgotPassword = async (req, res, next) => {
 };
 
 // @desc    Reset password
-// @route   PUT /api/v1/auth/resetpassword/:resettoken
+// @route   PUT /api/v1/auth/resetpassword/:resetToken
 // @access  Public
+export const resetPassword = async (req, res, next) => {
+  let user;
+  try {
+    const { resetToken } = req.params;
+    const { email, newPassword } = req.body;
+
+    if (!email || !newPassword || !resetToken) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email, newPassword and resetToken",
+      });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+    // Extract subdomain from email
+    const subdomain = email.match(/@([^.@]+)\.com$/)?.[1];
+    if (!subdomain) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
+
+    const organization = await Organization.findOne({ subdomain });
+    if (!organization || !organization.isActive) {
+      return res.status(400).json({
+        success: false,
+        message: "Organization not found or inactive",
+      });
+    }
+
+    // Connect to tenant database
+    const tenantConn = await createTenantDatabase(subdomain);
+    const TenantUser = tenantConn.model("User");
+    
+    console.log(email, newPassword, "TOken");
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 // Helper function for sending token response
 const sendTokenResponse = (user, statusCode, res) => {
