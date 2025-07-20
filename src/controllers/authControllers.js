@@ -2,6 +2,7 @@ import Organization from "../models/Organization.js";
 import User from "../models/User.js";
 import sendEmail from "../utils/sendEmail.js";
 import { createTenantDatabase } from "../utils/tenantService.js";
+import crypto from "crypto";
 
 // @desc    Login user
 // @route   POST /api/v1/auth/login
@@ -262,36 +263,41 @@ export const forgotPassword = async (req, res, next) => {
   }
 };
 
+
 // @desc    Reset password
 // @route   PUT /api/v1/auth/resetpassword/:resetToken
 // @access  Public
-export const resetPassword = async (req, res, next) => {
+export const resetPassword = async (req, res) => {
   let user;
   try {
     const { resetToken } = req.params;
     const { email, newPassword } = req.body;
 
+    // Validate input
     if (!email || !newPassword || !resetToken) {
       return res.status(400).json({
         success: false,
         message: "Please provide email, newPassword and resetToken",
       });
     }
+    
     if (newPassword.length < 6) {
       return res.status(400).json({
         success: false,
         message: "Password must be at least 6 characters",
       });
     }
+
     // Extract subdomain from email
     const subdomain = email.match(/@([^.@]+)\.com$/)?.[1];
     if (!subdomain) {
       return res.status(400).json({
         success: false,
-        message: "Invalid email format",
+        message: "Invalid email format. Email must be in format user@subdomain.com",
       });
     }
 
+    // Check organization
     const organization = await Organization.findOne({ subdomain });
     if (!organization || !organization.isActive) {
       return res.status(400).json({
@@ -303,13 +309,67 @@ export const resetPassword = async (req, res, next) => {
     // Connect to tenant database
     const tenantConn = await createTenantDatabase(subdomain);
     const TenantUser = tenantConn.model("User");
-    
-    console.log(email, newPassword, "TOken");
+
+    // Hash the reset token to compare with DB (using crypto directly since it's already imported)
+    const resetPasswordToken = crypto
+      .createHash("sha256")
+      .update(resetToken)
+      .digest("hex");
+
+    // Find user by email and valid reset token
+    user = await TenantUser.findOne({
+      email,
+      resetPasswordToken,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired password reset token",
+      });
+    }
+
+    // Set new password and clear reset token fields
+    user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    // Send confirmation email
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: "Password Reset Confirmation",
+        message: `Your password has been successfully reset. If you did not perform this action, please contact your administrator immediately.`,
+      });
+    } catch (emailErr) {
+      console.error("Failed to send confirmation email:", emailErr);
+      // Continue even if email fails since password was reset successfully
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
   } catch (err) {
-    console.log(err.message);
-    res.status(500).json({
+    console.error("Reset password error:", err);
+    
+    // Clear reset token if user was found but error occurred
+    if (user) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpire = undefined;
+      try {
+        await user.save({ validateBeforeSave: false });
+      } catch (saveErr) {
+        console.error("Failed to clear reset token:", saveErr);
+      }
+    }
+
+    return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Server error during password reset",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
   }
 };
