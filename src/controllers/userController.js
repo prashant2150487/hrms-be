@@ -296,7 +296,104 @@ export const allRoles = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error fetching roles",
-       error: process.env.NODE_ENV === 'development' ? err.message : undefined,
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+};
+
+// @desc    Get all departments from existing users
+// @route   GET /api/v1/users/departments
+// @access  Private/Admin
+export const getAllDepartments = async (req, res) => {
+  try {
+      // Connect to tenant database (assuming multi-tenant setup)
+    const tenantConn = req.tenantConn || mongoose;
+    const TenantUser = tenantConn.model("User");
+     // Aggregate to get all distinct departments from users
+    const departments = await TenantUser.aggregate([
+      { $match: { department: { $exists: true, $ne: null } } }, // Only include users with department field
+      { $group: { _id: "$department" } }, // Group by department
+      { $project: { _id: 0, department: "$_id" } }, // Format output
+      { $sort: { department: 1 } } // Sort alphabetically
+    ]);
+      // Extract just the department strings from the aggregation result
+    const departmentList = departments.map(item => item.department);
+
+    res.status(200).json({
+      success: true,
+      count: departmentList.length,
+      data: departmentList,
+    });
+
+  } catch (err) {
+    console.error("Get all departments error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching departments",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+};
+
+
+// @desc    Get all designations for a specific department
+// @route   GET /api/v1/users/departments/:department/designations
+// @access  Private/Admin
+
+export const getDesignationsByDepartment = async (req, res) => {
+  try {
+    const { department } = req.params;
+    
+    // Connect to tenant database
+    const tenantConn = req.tenantConn || mongoose;
+    const TenantUser = tenantConn.model("User");
+
+    // Validate department parameter
+    if (!department) {
+      return res.status(400).json({
+        success: false,
+        message: "Department parameter is required"
+      });
+    }
+
+    // First check if the department exists
+    const departmentExists = await TenantUser.findOne({ department });
+    if (!departmentExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Department not found"
+      });
+    }
+
+    // Get all distinct designations for the specified department
+    const designations = await TenantUser.aggregate([
+      { 
+        $match: { 
+          department: department,
+          designation: { $exists: true, $ne: null } 
+        } 
+      },
+      { $group: { _id: "$designation" } },
+      { $project: { _id: 0, designation: "$_id" } },
+      { $sort: { designation: 1 } }
+    ]);
+
+    // Extract just the designation strings
+    const designationList = designations.map(item => item.designation);
+
+    res.status(200).json({
+      success: true,
+      department: department,
+      count: designationList.length,
+      data: designationList
+    });
+
+  } catch (err) {
+    console.error("Error getting designations by department:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching designations",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
   }
 };
