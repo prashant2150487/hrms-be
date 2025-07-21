@@ -260,10 +260,43 @@ export const deactivateUser = async (req, res) => {
       },
     });
   } catch (err) {
-   console.error("Toggle user active status error:", err);
+    console.error("Toggle user active status error:", err);
     res.status(500).json({
       success: false,
       message: "Server error toggling user status",
+    });
+  }
+};
+
+// @desc    Get all roles from existing users
+// @route   GET /api/v1/users/role
+// @access  Private/Admin
+
+export const allRoles = async (req, res) => {
+  try {
+    // Connect to tenant database (assuming multi-tenant setup)
+    const tenantConn = req.tenantConn || mongoose;
+    const TenantUser = tenantConn.model("User");
+    const roles = await TenantUser.aggregate([
+      { $match: { role: { $exists: true } } }, // Only include users with role field
+      { $group: { _id: "$role" } }, // Group by role
+      { $project: { _id: 0, role: "$_id" } }, // Format output
+      { $sort: { role: 1 } }, // Sort alphabetically
+    ]);
+
+    // Extract just the role strings from the aggregation result
+    const roleList = roles.map((item) => item.role);
+    res.status(200).json({
+      success: true,
+      count: roleList.length,
+      data: roleList,
+    });
+  } catch (err) {
+    console.error("Get all roles error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error fetching roles",
+       error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     });
   }
 };
