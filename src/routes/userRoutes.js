@@ -3,6 +3,7 @@ import {
   allRoles,
   createUser,
   deactivateUser,
+  deleteUser,
   getAllDepartments,
   getAllUsers,
   getDesignationsByDepartment,
@@ -27,4 +28,6 @@ router.get(
   authorize("admin"),
   getDesignationsByDepartment
 );
+router.delete("/users/delete/:id", protect, authorize("admin"), deleteUser);
+
 export default router;

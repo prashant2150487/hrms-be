@@ -306,25 +306,24 @@ export const allRoles = async (req, res) => {
 // @access  Private/Admin
 export const getAllDepartments = async (req, res) => {
   try {
-      // Connect to tenant database (assuming multi-tenant setup)
+    // Connect to tenant database (assuming multi-tenant setup)
     const tenantConn = req.tenantConn || mongoose;
     const TenantUser = tenantConn.model("User");
-     // Aggregate to get all distinct departments from users
+    // Aggregate to get all distinct departments from users
     const departments = await TenantUser.aggregate([
       { $match: { department: { $exists: true, $ne: null } } }, // Only include users with department field
       { $group: { _id: "$department" } }, // Group by department
       { $project: { _id: 0, department: "$_id" } }, // Format output
-      { $sort: { department: 1 } } // Sort alphabetically
+      { $sort: { department: 1 } }, // Sort alphabetically
     ]);
-      // Extract just the department strings from the aggregation result
-    const departmentList = departments.map(item => item.department);
+    // Extract just the department strings from the aggregation result
+    const departmentList = departments.map((item) => item.department);
 
     res.status(200).json({
       success: true,
       count: departmentList.length,
       data: departmentList,
     });
-
   } catch (err) {
     console.error("Get all departments error:", err);
     res.status(500).json({
@@ -335,7 +334,6 @@ export const getAllDepartments = async (req, res) => {
   }
 };
 
-
 // @desc    Get all designations for a specific department
 // @route   GET /api/v1/users/departments/:department/designations
 // @access  Private/Admin
@@ -343,7 +341,7 @@ export const getAllDepartments = async (req, res) => {
 export const getDesignationsByDepartment = async (req, res) => {
   try {
     const { department } = req.params;
-    
+
     // Connect to tenant database
     const tenantConn = req.tenantConn || mongoose;
     const TenantUser = tenantConn.model("User");
@@ -352,7 +350,7 @@ export const getDesignationsByDepartment = async (req, res) => {
     if (!department) {
       return res.status(400).json({
         success: false,
-        message: "Department parameter is required"
+        message: "Department parameter is required",
       });
     }
 
@@ -361,43 +359,107 @@ export const getDesignationsByDepartment = async (req, res) => {
     if (!departmentExists) {
       return res.status(404).json({
         success: false,
-        message: "Department not found"
+        message: "Department not found",
       });
     }
 
     // Get all distinct designations for the specified department
     const designations = await TenantUser.aggregate([
-      { 
-        $match: { 
+      {
+        $match: {
           department: department,
-          designation: { $exists: true, $ne: null } 
-        } 
+          designation: { $exists: true, $ne: null },
+        },
       },
       { $group: { _id: "$designation" } },
       { $project: { _id: 0, designation: "$_id" } },
-      { $sort: { designation: 1 } }
+      { $sort: { designation: 1 } },
     ]);
 
     // Extract just the designation strings
-    const designationList = designations.map(item => item.designation);
+    const designationList = designations.map((item) => item.designation);
 
     res.status(200).json({
       success: true,
       department: department,
       count: designationList.length,
-      data: designationList
+      data: designationList,
     });
-
   } catch (err) {
     console.error("Error getting designations by department:", err);
     res.status(500).json({
       success: false,
       message: "Server error while fetching designations",
-      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 };
 
-// @desc    Acctivate user
+// @desc    Delete user permanently
 // @route   DELETE /api/v1/users/:id
 // @access  Private/Admin
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    //prevent user from deleting themselves
+    if (req.user._id.toString() === id) {
+      return res.status(400).json({
+        success: false,
+        message: "YOu can delete your own user account",
+      });
+    }
+    // Validate MongoDB ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid user ID format: ${id}`,
+      });
+    }
+
+    // Access the User model safely from tenant connection
+    let TenantUser;
+    try {
+      TenantUser = req.tenantConn.model("User");
+    } catch (modelErr) {
+      console.error("Model access error:", modelErr);
+      return res.status(500).json({
+        success: false,
+        message: "Error accessing user model",
+      });
+    }
+
+    // Attempt to find and delete the user
+    const user = await TenantUser.findOneAndDelete({
+      _id: id,
+      organization: req.user.organization,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found in this organization",
+      });
+    }
+
+    // Successful deletion
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+      data: {
+        id: user._id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Delete user error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting user",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    });
+  }
+};
