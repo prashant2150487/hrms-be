@@ -21,6 +21,22 @@ export const createUser = async (req, res) => {
       panCard,
       aadharCard,
       uanNumber,
+      // New personal information fields
+      dateOfBirth,
+      age,
+      gender,
+      marriedStatus,
+      // New employment fields
+      salary,
+      reportingManager,
+      companyLocation,
+      employmentStatus,
+      // New banking fields
+      accountHolder,
+      accountNumber,
+      ifscCode,
+      branchName,
+      bankName,
     } = req.body;
 
     // Check if user already exists in tenant DB
@@ -51,12 +67,29 @@ export const createUser = async (req, res) => {
       panCard,
       aadharCard,
       uanNumber,
+      // Personal information
+      dateOfBirth,
+      age,
+      gender,
+      marriedStatus,
+      // Employment details
+      salary,
+      reportingManager,
+      companyLocation,
+      employmentStatus: "Active",
+      // Banking information
+      accountHolder,
+      accountNumber,
+      ifscCode,
+      branchName,
+      bankName,
     });
 
     // TODO: Send welcome email if needed
 
     res.status(201).json({
       success: true,
+      message: "User created successfully",
       data: {
         id: user._id,
         firstName: user.firstName,
@@ -65,6 +98,10 @@ export const createUser = async (req, res) => {
         role: user.role,
         phone: user.phone,
         isActive: user.isActive,
+        department: user.department,
+        designation: user.designation,
+        location: user.location,
+        employmentStatus: user.employmentStatus,
       },
     });
   } catch (err) {
@@ -72,6 +109,7 @@ export const createUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error creating user",
+      error: process.env.NODE_ENV === "development" ? err.message : undefined,
     });
   }
 };
