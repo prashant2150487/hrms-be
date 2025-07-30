@@ -36,8 +36,16 @@ const userSchema = new mongoose.Schema(
     
     // Employment Details
     startDate: Date,
-    department: String,
-    designation: String,
+    department: {
+      type: String,
+      enum: ["Sales", "Marketing", "HR", "IT", "Finance", "Operations", "Other"],
+      default: "Other"
+    },
+    designation: {
+      type: String,
+      enum: ["Manager", "Team Lead", "Developer", "Tester", "Designer", "Other"],
+      default: "Other"
+    },
     location: String,
     companyLocation: String,
     salary: Number,

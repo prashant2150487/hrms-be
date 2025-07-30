@@ -347,6 +347,9 @@ export const getAllDepartments = async (req, res) => {
     // Connect to tenant database (assuming multi-tenant setup)
     const tenantConn = req.tenantConn || mongoose;
     const TenantUser = tenantConn.model("User");
+
+    // Get enum values from the schema
+    const departmentEnum = TenantUser.schema.path('department').enumValues;
     // Aggregate to get all distinct departments from users
     const departments = await TenantUser.aggregate([
       { $match: { department: { $exists: true, $ne: null } } }, // Only include users with department field
@@ -356,11 +359,13 @@ export const getAllDepartments = async (req, res) => {
     ]);
     // Extract just the department strings from the aggregation result
     const departmentList = departments.map((item) => item.department);
+    // Combine enum values with actual departments (remove duplicates)
+    const allDepartments = [...new Set([...departmentEnum, ...departmentList])].sort();
 
     res.status(200).json({
       success: true,
-      count: departmentList.length,
-      data: departmentList,
+      count: allDepartments.length,
+      data: allDepartments,
     });
   } catch (err) {
     console.error("Get all departments error:", err);
