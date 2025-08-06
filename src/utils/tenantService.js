@@ -3,6 +3,7 @@
 import mongoose from "mongoose";
 import { userSchema } from "../models/User.js";
 import { attendanceSchema } from "../models/Attendance.js";
+import { leaveSchema } from "../models/Leave.js";
 
 const connections = {};
 
@@ -18,7 +19,8 @@ export const createTenantDatabase = async (subdomain) => {
   });
 
   conn.model("User", userSchema);
-   conn.model("Attendance", attendanceSchema);
+  conn.model("Attendance", attendanceSchema);
+  conn.model("Leave",leaveSchema)
   // Initialize other tenant-specific models here
 
   connections[dbName] = conn;
