@@ -4,7 +4,6 @@
 export const applyForLeave = async (req, res, next) => {
   try {
     const { startDate, endDate, leaveType, reason, notifyTo } = req.body;
-    console.log(req.body, "req");
 
     const user = req.user._id;
     const organization = req.user.organization;
@@ -121,3 +120,46 @@ export const applyForLeave = async (req, res, next) => {
 
 //   res.status(200).json({ success: true, data: leave });
 // });
+
+
+// @desc    Search users for notification (by name or email)
+// @route   GET /api/v1/leaves/notifyUser
+// @access  Private
+export const notifyUser = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    if (!search || search.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide at least 3 characters to search",
+      });
+    }
+
+    const TenantUsers = req.tenantConn.model("User");
+    
+    // Case-insensitive search for firstName, lastName, or email containing the search term
+    const users = await TenantUsers.find({
+      $or: [
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ]
+    })
+    .select('firstName lastName email role') // Only return essential fields
+    .limit(3); // Limit to 3 results for performance
+
+    res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};

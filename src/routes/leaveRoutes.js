@@ -2,6 +2,7 @@ import express from "express";
 import { protect } from "../middleware/auth.js";
 import {
   applyForLeave,
+  notifyUser,
   // getAllLeaves,
   // getLeaveById,
   // updateLeaveStatus,
@@ -16,6 +17,8 @@ router.post(
   protect,
   applyForLeave
 );
+router.get("/notifyUser", protect, notifyUser);
+
 
 // router.route("/:id").get(getLeaveById);
 
