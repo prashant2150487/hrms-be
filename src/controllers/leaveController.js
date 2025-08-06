@@ -10,12 +10,10 @@ export const applyForLeave = async (req, res, next) => {
     const organization = req.user.organization;
 
     if (!startDate || !endDate || !leaveType || !reason) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Please provide all required fields.",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required fields.",
+      });
     }
 
     const Leave = req.tenantConn.model("Leave");
@@ -25,12 +23,10 @@ export const applyForLeave = async (req, res, next) => {
       const TenantUser = req.tenantConn.model("User");
       const usersExist = await TenantUser.find({ _id: { $in: notifyTo } });
       if (usersExist.length !== notifyTo.length) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "One or more users to notify are invalid.",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "One or more users to notify are invalid.",
+        });
       }
     }
 
