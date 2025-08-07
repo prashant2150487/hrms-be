@@ -121,7 +121,6 @@ export const applyForLeave = async (req, res, next) => {
 //   res.status(200).json({ success: true, data: leave });
 // });
 
-
 // @desc    Search users for notification (by name or email)
 // @route   GET /api/v1/leaves/notifyUser
 // @access  Private
@@ -137,24 +136,23 @@ export const notifyUser = async (req, res) => {
     }
 
     const TenantUsers = req.tenantConn.model("User");
-    
+
     // Case-insensitive search for firstName, lastName, or email containing the search term
     const users = await TenantUsers.find({
       $or: [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ]
+        { firstName: { $regex: search, $options: "i" } },
+        { lastName: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
     })
-    .select('firstName lastName email role') // Only return essential fields
-    .limit(3); // Limit to 3 results for performance
+      .select("firstName lastName email role") // Only return essential fields
+      .limit(3); // Limit to 3 results for performance
 
     res.status(200).json({
       success: true,
       count: users.length,
       data: users,
     });
-
   } catch (err) {
     console.error(err);
     res.status(500).json({
