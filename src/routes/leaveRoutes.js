@@ -3,6 +3,7 @@ import { authorize, protect } from "../middleware/auth.js";
 import {
   applyForLeave,
   getAllLeaves,
+  getAllLeavesByUser,
   getLeaveById,
   notifyUser,
   updateLeaveStatus,
@@ -16,6 +17,7 @@ const router = express.Router();
 router.post("/apply-leave", protect, applyForLeave);
 router.get("/notifyUser", protect, notifyUser);
 router.get("/all-leaves", protect, authorize("admin"), getAllLeaves);
+router.get("/my", protect, getAllLeavesByUser);
 router.get("/:id", protect, getLeaveById);
 router.put(
   "/:id/status",
@@ -23,6 +25,7 @@ router.put(
   authorize("admin", "manager", "teamlead"),
   updateLeaveStatus
 );
+
 
 
 export default router;

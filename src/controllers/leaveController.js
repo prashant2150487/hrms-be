@@ -58,7 +58,9 @@ export const applyForLeave = async (req, res, next) => {
 // @access  Private (Admin/Manager/TeamLead)
 export const getAllLeaves = async (req, res) => {
   const Leave = req.tenantConn.model("Leave");
-  const leaves = await Leave.find({ organization: req.user.organization }).populate("user", "firstName lastName email");
+  const leaves = await Leave.find({
+    organization: req.user.organization,
+  }).populate("user", "firstName lastName email");
 
   res.status(200).json({
     success: true,
@@ -72,22 +74,38 @@ export const getAllLeaves = async (req, res) => {
 // @access  Private
 export const getLeaveById = async (req, res) => {
   const Leave = req.tenantConn.model("Leave");
-  const leave = await Leave.findById(req.params.id).populate("user", "firstName lastName email");
+  const leave = await Leave.findById(req.params.id).populate(
+    "user",
+    "firstName lastName email"
+  );
 
   if (!leave) {
-    return res.status(404).json({ success: false, message: `Leave not found with id of ${req.params.id}` });
+    return res
+      .status(404)
+      .json({
+        success: false,
+        message: `Leave not found with id of ${req.params.id}`,
+      });
   }
 
   // Allow user to see their own leave, or admin/manager/teamlead to see any
-  if (leave.user._id.toString() !== req.user._id.toString() && !["admin", "manager", "teamlead"].includes(req.user.role)) {
-    return res.status(403).json({ success: false, message: "Not authorized to view this leave request" });
+  if (
+    leave.user._id.toString() !== req.user._id.toString() &&
+    !["admin", "manager", "teamlead"].includes(req.user.role)
+  ) {
+    return res
+      .status(403)
+      .json({
+        success: false,
+        message: "Not authorized to view this leave request",
+      });
   }
 
   res.status(200).json({
     success: true,
     data: leave,
   });
-}
+};
 
 // @desc    Update leave status (approve/reject)
 // @route   PUT /api/v1/leaves/:id/status
@@ -97,18 +115,34 @@ export const updateLeaveStatus = async (req, res, next) => {
   const { status, rejectionReason } = req.body;
 
   if (!status || !["Approved", "Rejected", "Cancelled"].includes(status)) {
-    return res.status(400).json({ success: false, message: "Please provide a valid status ('Approved', 'Rejected', or 'Cancelled')." });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message:
+          "Please provide a valid status ('Approved', 'Rejected', or 'Cancelled').",
+      });
   }
 
   if (status === "Rejected" && !rejectionReason) {
-    return res.status(400).json({ success: false, message: "Please provide a reason for rejection." });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        message: "Please provide a reason for rejection.",
+      });
   }
 
   const Leave = req.tenantConn.model("Leave");
   let leave = await Leave.findById(req.params.id);
 
   if (!leave) {
-    return res.status(404).json({ success: false, message: `Leave not found with id of ${req.params.id}` });
+    return res
+      .status(404)
+      .json({
+        success: false,
+        message: `Leave not found with id of ${req.params.id}`,
+      });
   }
 
   leave.status = status;
@@ -120,8 +154,7 @@ export const updateLeaveStatus = async (req, res, next) => {
   // TODO: Notify the user who applied for leave about the status change.
 
   res.status(200).json({ success: true, data: leave });
-
-}
+};
 // @desc    Search users for notification (by name or email)
 // @route   GET /api/v1/leaves/notifyUser
 // @access  Private
@@ -153,6 +186,32 @@ export const notifyUser = async (req, res) => {
       success: true,
       count: users.length,
       data: users,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+    });
+  }
+};
+
+// @desc    Get all leaves for the logged-in user
+// @route   GET /api/v1/leaves/my
+// @access  Private (Employee)
+export const getAllLeavesByUser = async (req, res) => {
+  try {
+    const Leave = req.tenantConn.model("Leave");
+
+    const leaves = await Leave.find({ user: req.user._id }).populate(
+      "user",
+      "firstName lastName email"
+    );
+
+    res.status(200).json({
+      success: true,
+      count: leaves.length,
+      data: leaves,
     });
   } catch (err) {
     console.error(err);
