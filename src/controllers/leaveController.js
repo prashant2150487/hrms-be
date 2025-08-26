@@ -14,11 +14,33 @@ export const applyForLeave = async (req, res, next) => {
         message: "Please provide all required fields.",
       });
     }
-
+    // Validate dates
+    if (new Date(startDate) > new Date(endDate)) {
+      return res.status(400).json({
+        success: false,
+        message: "Start date cannot be after end date.",
+      });
+    }
     const Leave = req.tenantConn.model("Leave");
+    // Prevent overlapping leaves for the same user
+    const overLapping = await Leave.findOne({
+      user,
+      $or: [
+        {
+          startDate: { $lt: new Date(endDate) },
+          endDate: { $gt: new Date(startDate) },
+        },
+      ],
+    });
+    if (overLapping) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have a leave request for this date range.",
+      });
+    }
 
     // Optional: Validate notifyTo users exist
-    if (notifyTo && notifyTo.length > 0) {
+    if (notifyTo?.length > 0) {
       const TenantUser = req.tenantConn.model("User");
       const usersExist = await TenantUser.find({ _id: { $in: notifyTo } });
       if (usersExist.length !== notifyTo.length) {
@@ -38,6 +60,7 @@ export const applyForLeave = async (req, res, next) => {
       reason,
       notifyTo,
     });
+
     res.status(201).json({
       success: true,
       data: leave,
@@ -80,12 +103,10 @@ export const getLeaveById = async (req, res) => {
   );
 
   if (!leave) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message: `Leave not found with id of ${req.params.id}`,
-      });
+    return res.status(404).json({
+      success: false,
+      message: `Leave not found with id of ${req.params.id}`,
+    });
   }
 
   // Allow user to see their own leave, or admin/manager/teamlead to see any
@@ -93,12 +114,10 @@ export const getLeaveById = async (req, res) => {
     leave.user._id.toString() !== req.user._id.toString() &&
     !["admin", "manager", "teamlead"].includes(req.user.role)
   ) {
-    return res
-      .status(403)
-      .json({
-        success: false,
-        message: "Not authorized to view this leave request",
-      });
+    return res.status(403).json({
+      success: false,
+      message: "Not authorized to view this leave request",
+    });
   }
 
   res.status(200).json({
@@ -115,34 +134,28 @@ export const updateLeaveStatus = async (req, res, next) => {
   const { status, rejectionReason } = req.body;
 
   if (!status || !["Approved", "Rejected", "Cancelled"].includes(status)) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message:
-          "Please provide a valid status ('Approved', 'Rejected', or 'Cancelled').",
-      });
+    return res.status(400).json({
+      success: false,
+      message:
+        "Please provide a valid status ('Approved', 'Rejected', or 'Cancelled').",
+    });
   }
 
   if (status === "Rejected" && !rejectionReason) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Please provide a reason for rejection.",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Please provide a reason for rejection.",
+    });
   }
 
   const Leave = req.tenantConn.model("Leave");
   let leave = await Leave.findById(req.params.id);
 
   if (!leave) {
-    return res
-      .status(404)
-      .json({
-        success: false,
-        message: `Leave not found with id of ${req.params.id}`,
-      });
+    return res.status(404).json({
+      success: false,
+      message: `Leave not found with id of ${req.params.id}`,
+    });
   }
 
   leave.status = status;
