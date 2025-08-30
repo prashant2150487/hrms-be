@@ -75,6 +75,7 @@ export const getSingleHoliday = async (req, res) => {
 
 export const updateHoliday = async (req, res) => {
   try {
+    const HolidaysCalender = req.tenantConn.model("HolidaysCalender");
     const holiday = await HolidaysCalender.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -94,15 +95,16 @@ export const updateHoliday = async (req, res) => {
 
 export const deleteHoliday = async (req, res) => {
   try {
+    const HolidaysCalender = req.tenantConn.model("HolidaysCalender");
     const holiday = await HolidaysCalender.findByIdAndDelete(req.params.id);
-    res.stats(200).json({
+    res.status(200).json({
       success: true,
-      data: holiday,
+      message: "Holiday deleted successfully",
     });
   } catch (error) {
-    res.stats(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to delete holiday",
     });
   }
 };
