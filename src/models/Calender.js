@@ -1,7 +1,8 @@
+import mongoose from "mongoose";
 const holidaysCalenderSchema = new mongoose.Schema(
   {
     title: {
-      typeof: String,
+      type: String,
       required: true,
       trim: true,
     },
@@ -10,18 +11,16 @@ const holidaysCalenderSchema = new mongoose.Schema(
       required: true,
     },
     description: {
-      typeof: String,
+      type: String,
       trim: true,
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
   },
   { timestamps: true }

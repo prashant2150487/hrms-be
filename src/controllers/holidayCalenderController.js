@@ -1,16 +1,33 @@
-import HolidaysCalender from "../models/Calender";
+import HolidaysCalender from "../models/Calender.js";
 
-export const createHolidays = async (req, res) => {
+export const createHoliday = async (req, res) => {
   try {
     const { title, date, description } = req.body;
-    const holiday = await HolidaysCalender.create({ title, date, description });
-    res.stats(201).json({
+    if (!title || !date) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide title and date.",
+      });
+    }
+    const holiday = req.tenantConn.model("HolidaysCalender");
+    const existingHolidays = await holiday.findOne({
+      title: title,
+    });
+    if (existingHolidays) {
+      return res.status(400).json({
+        success: false,
+        message: "A holiday with the same title and date already exists.",
+      });
+    }
+
+    const response = await holiday.create({ title, date, description });
+    res.status(201).json({
       success: true,
       message: "Holiday created successfully",
-      data: holiday,
+      data: response,
     });
   } catch (error) {
-    res.stats(500).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -19,15 +36,14 @@ export const createHolidays = async (req, res) => {
 
 export const getAllHolidays = async (req, res) => {
   try {
-    const holidays = (await HolidaysCalender.findAll())
-      ? await HolidaysCalender.findAll()
-      : await HolidaysCalender.find();
-    res.stats(200).json({
+    const holiday = req.tenantConn.model("HolidaysCalender");
+    const holidays = await holiday.find();
+    res.status(200).json({
       success: true,
       data: holidays,
     });
   } catch (error) {
-    res.stats(500).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
@@ -36,15 +52,23 @@ export const getAllHolidays = async (req, res) => {
 
 export const getSingleHoliday = async (req, res) => {
   try {
+    const HolidaysCalender = req.tenantConn.model("HolidaysCalender");
     const holiday = await HolidaysCalender.findById(req.params.id);
-    res.stats(200).json({
+    // Check if holiday exists
+    if (!holiday) {
+      return res.status(404).json({
+        success: false,
+        message: "Holiday not found",
+      });
+    }
+    res.status(200).json({
       success: true,
       data: holiday,
     });
   } catch (error) {
-    res.stats(500).json({
+    res.status(500).json({
       success: false,
-      message: error.message,
+      message: error.message || "Failed to retrieve holiday",
     });
   }
 };
@@ -56,12 +80,12 @@ export const updateHoliday = async (req, res) => {
       req.body,
       { new: true }
     );
-    res.stats(200).json({
+    res.status(200).json({
       success: true,
       data: holiday,
     });
   } catch (error) {
-    res.stats(500).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });

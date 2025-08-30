@@ -13,6 +13,8 @@ import organizationRoutes from "./routes/organizationRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import leaveRoutes from "./routes/leaveRoutes.js";
+import holidayRoutes from "./routes/holidayRoutes.js";
+
 
 const app = express();
 app.disable("x-powered-by");
@@ -56,6 +58,8 @@ app.use("/api/v1", organizationRoutes);
 app.use("/api/v1/admin", userRoutes);
 app.use("/api/v1/attendance", attendanceRoutes);
 app.use("/api/v1/leave", leaveRoutes);
+app.use("/api/v1/holiday", holidayRoutes);
+
 
 
 // 404
