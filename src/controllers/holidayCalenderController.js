@@ -84,6 +84,7 @@ export const updateHoliday = async (req, res) => {
     res.status(200).json({
       success: true,
       data: holiday,
+      message: "Holiday update successfully."
     });
   } catch (error) {
     res.status(500).json({
