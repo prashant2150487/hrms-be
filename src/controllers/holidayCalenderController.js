@@ -109,6 +109,74 @@ export const deleteHoliday = async (req, res) => {
     });
   }
 };
+// @desc    Get holidays for a specific date range
+// @route   GET /api/v1/holidays/range
+// @access  Private
+export const getHolidaysInRange = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide startDate and endDate parameters.",
+      });
+    }
+    
+    const HolidaysCalender = req.tenantConn.model("HolidaysCalender");
+    const holidays = await HolidaysCalender.find({
+      date: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    });
+    
+    res.status(200).json({
+      success: true,
+      count: holidays.length,
+      data: holidays,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+// @desc    Check if a date is a holiday
+// @route   GET /api/v1/holidays/check
+// @access  Private
+export const checkHoliday = async (req, res) => {
+  try {
+    const { date } = req.query;
+    
+    if (!date) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a date parameter.",
+      });
+    }
+    
+    const HolidaysCalender = req.tenantConn.model("HolidaysCalender");
+    const holiday = await HolidaysCalender.findOne({
+      date: new Date(date),
+    });
+    
+    res.status(200).json({
+      success: true,
+      isHoliday: !!holiday,
+      data: holiday || null,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+
 // {
 //   "title": "Independence Day",
 //   "date": "2025-08-15",

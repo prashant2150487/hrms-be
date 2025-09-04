@@ -14,6 +14,7 @@ import userRoutes from "./routes/userRoutes.js";
 import attendanceRoutes from "./routes/attendanceRoutes.js";
 import leaveRoutes from "./routes/leaveRoutes.js";
 import holidayRoutes from "./routes/holidayRoutes.js";
+import policyRoutes from "./routes/leavePolicyRoutes.js";
 
 
 const app = express();
@@ -59,6 +60,7 @@ app.use("/api/v1/admin", userRoutes);
 app.use("/api/v1/attendance", attendanceRoutes);
 app.use("/api/v1/leave", leaveRoutes);
 app.use("/api/v1/holiday", holidayRoutes);
+app.use("/api/v1/policy", policyRoutes)
 
 
 
