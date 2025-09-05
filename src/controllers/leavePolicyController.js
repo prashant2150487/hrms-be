@@ -168,40 +168,94 @@ export const applyPolicyToAllEmployees = async (req, res) => {
 // @desc    Get organization leave policy
 // @route   GET /api/v1/leaves/policy
 // @access  Private (Admin)
+// export const getOrganizationLeavePolicy = async (req, res) => {
+//   try {
+//     const { year } = req.query;
+    
+//     if (req.user.role !== "admin") {
+//       return res.status(403).json({
+//         success: false,
+//         message: "Only admin can view organization leave policy",
+//       });
+//     }
+    
+//     const organizationId = req.user.organization;
+//     const selectedYear = year || new Date().getFullYear();
+    
+//     const LeavePolicy = req.tenantConn.model("LeavePolicy");
+    
+//     const policy = await LeavePolicy.findOne({
+//       organization: organizationId,
+//       year: selectedYear
+//     });
+    
+//     if (!policy) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No leave policy found for this organization and year.",
+//       });
+//     }
+    
+//     res.status(200).json({
+//       success: true,
+//       data: policy,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server Error",
+//     });
+//   }
+// };
 export const getOrganizationLeavePolicy = async (req, res) => {
   try {
     const { year } = req.query;
-    
+
     if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only admin can view organization leave policy",
       });
     }
-    
+
     const organizationId = req.user.organization;
-    const selectedYear = year || new Date().getFullYear();
-    
     const LeavePolicy = req.tenantConn.model("LeavePolicy");
-    
-    const policy = await LeavePolicy.findOne({
-      organization: organizationId,
-      year: selectedYear
-    });
-    
-    if (!policy) {
-      return res.status(404).json({
-        success: false,
-        message: "No leave policy found for this organization and year.",
+
+    let policies;
+
+    if (year) {
+      // fetch for specific year
+      policies = await LeavePolicy.findOne({
+        organization: organizationId,
+        year: year,
       });
+      if (!policies) {
+        return res.status(404).json({
+          success: false,
+          message: `No leave policy found for year ${year}.`,
+        });
+      }
+    } else {
+      // fetch all leave policies for organization
+      policies = await LeavePolicy.find({
+        organization: organizationId,
+      }).sort({ year: -1 }); // optional: latest year first
+
+      if (!policies.length) {
+        return res.status(404).json({
+          success: false,
+          message: "No leave policies found for this organization.",
+        });
+      }
     }
-    
+
     res.status(200).json({
       success: true,
-      data: policy,
+      data: policies,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Error fetching leave policy:", err);
     res.status(500).json({
       success: false,
       message: "Server Error",
