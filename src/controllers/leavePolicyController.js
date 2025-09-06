@@ -4,33 +4,34 @@
 export const setOrganizationLeavePolicy = async (req, res) => {
   try {
     const { paidLeaves, sickLeaves, emergencyLeaves, year } = req.body;
-    
+
     if (req.user.role !== "admin") {
       return res.status(403).json({
         success: false,
         message: "Only admin can set organization leave policy",
       });
     }
-    
+
     const organizationId = req.user.organization;
     const selectedYear = year || new Date().getFullYear();
-    
+
     const LeavePolicy = req.tenantConn.model("LeavePolicy");
-    
+
     // Check if policy already exists for this year
     const existingPolicy = await LeavePolicy.findOne({
       organization: organizationId,
-      year: selectedYear
+      year: selectedYear,
     });
-    
+
     let policy;
-    
+
     if (existingPolicy) {
       // Update existing policy
       if (paidLeaves !== undefined) existingPolicy.paidLeaves = paidLeaves;
       if (sickLeaves !== undefined) existingPolicy.sickLeaves = sickLeaves;
-      if (emergencyLeaves !== undefined) existingPolicy.emergencyLeaves = emergencyLeaves;
-      
+      if (emergencyLeaves !== undefined)
+        existingPolicy.emergencyLeaves = emergencyLeaves;
+
       policy = await existingPolicy.save();
     } else {
       // Create new policy
@@ -39,10 +40,10 @@ export const setOrganizationLeavePolicy = async (req, res) => {
         paidLeaves: paidLeaves || 12,
         sickLeaves: sickLeaves || 8,
         emergencyLeaves: emergencyLeaves || 4,
-        year: selectedYear
+        year: selectedYear,
       });
     }
-    
+
     res.status(200).json({
       success: true,
       message: "Organization leave policy updated successfully",

@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const leaveBalanceSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+   
     organization: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Organization",
@@ -49,6 +45,7 @@ const leaveBalanceSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+leaveBalanceSchema.index({ organization: 1, year: 1 }, { unique: true });
 const LeaveBalance = mongoose.model("LeaveBalance", leaveBalanceSchema);
 export { leaveBalanceSchema };
 export default LeaveBalance;
