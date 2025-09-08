@@ -37,14 +37,12 @@ const userSchema = new mongoose.Schema(
     // Employment Details
     startDate: Date,
     department: {
-      type: String,
-      enum: ["Sales", "Marketing", "HR", "IT", "Finance", "Operations", "Other"],
-      default: "Other"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department"
     },
     designation: {
-      type: String,
-      enum: ["Manager", "Team Lead", "Developer", "Tester", "Designer", "Other"],
-      default: "Other"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Designation"
     },
     location: String,
     companyLocation: String,
