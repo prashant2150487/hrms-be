@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Department from "./Department";
+import Department from "./Department.js";
 
 const DesignationSchema = new mongoose.Schema(
   {
@@ -29,7 +29,7 @@ const DesignationSchema = new mongoose.Schema(
       required: true,
     },
     description: {
-      type: string,
+      type: String,
     },
     isActive: {
       type: Boolean,

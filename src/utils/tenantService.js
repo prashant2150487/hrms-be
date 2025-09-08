@@ -7,6 +7,8 @@ import { leaveSchema } from "../models/Leave.js";
 import { holidaysCalenderSchema } from "../models/Calender.js";
 import { leaveBalanceSchema } from "../models/LeaveBalance.js";
 import { LeavePolicySchema } from "../models/LeavePolicy.js";
+import { DepartmentSchema } from "../models/Department.js";
+import { DesignationSchema } from "../models/Designation.js";
 
 const connections = {};
 
@@ -27,6 +29,9 @@ export const createTenantDatabase = async (subdomain) => {
   conn.model("HolidaysCalender", holidaysCalenderSchema);
   conn.model("LeaveBalance",leaveBalanceSchema)
   conn.model("LeavePolicy", LeavePolicySchema);
+  conn.model("Department", DepartmentSchema);
+  conn.model("Designation", DesignationSchema);
+
   // Initialize other tenant-specific models here
 
   connections[dbName] = conn;
