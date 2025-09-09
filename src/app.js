@@ -39,8 +39,13 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 //     },
 //   })
 // );
-// app.use(helmet());
 // app.use(xss());
+
+app.use(helmet()); // 1. Secure HTTP headers
+
+
+app.use(hpp())   // 4. Prevent HTTP Parameter Pollution
+
 
 app.use(
   rateLimit({
@@ -51,7 +56,8 @@ app.use(
     legacyHeaders: false,
   })
 );
-app.use(hpp());
+
+
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 
 // Routes
