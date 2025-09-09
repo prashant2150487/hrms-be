@@ -19,7 +19,7 @@ export const createDepartment = async (req, res) => {
 // Get All Departments
 export const getDepartments = async (req, res) => {
   try {
-    const departments = await Department.find({ isActive: true });
+    const departments = await Department.find();
     res.status(200).json({ success: true, data: departments });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
