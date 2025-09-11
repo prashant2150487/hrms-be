@@ -41,10 +41,10 @@ app.use(cookieParser(process.env.COOKIE_SECRET));
 // );
 // app.use(xss());
 
-app.use(helmet()); // 1. Secure HTTP headers
+// app.use(helmet()); // 1. Secure HTTP headers
 
 
-app.use(hpp())   // 4. Prevent HTTP Parameter Pollution
+// app.use(hpp())   // 4. Prevent HTTP Parameter Pollution
 
 
 app.use(

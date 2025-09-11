@@ -97,6 +97,8 @@ export const applyPolicyToAllEmployees = async (req, res) => {
       organization: organizationId,
       status: "active"
     }).select("_id");
+    console.log(employees)
+    console.log(policy)
     
     if (!employees.length) {
       return res.status(404).json({
